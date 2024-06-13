@@ -1,0 +1,437 @@
+#include <SFML/Graphics.hpp>
+#include <SFML/Window.hpp>
+#include <ctime>
+#include <cstdlib>
+#include <string>
+#include <iostream>
+#include <vector>
+
+enum GameState {
+    MENU,
+    GAME,
+    GAME_MODE
+};
+
+struct GameSettings {
+    float wordSpeed;
+    int wordLength;
+};
+
+class Star {
+public:
+    Star(const sf::RenderWindow& window) {
+        float x = static_cast<float>(rand() % window.getSize().x);
+        float y = static_cast<float>(rand() % window.getSize().y);
+        position = sf::Vector2f(x, y);
+        speed = static_cast<float>(rand() % 50) / 100.0f + 0.05f; // Speed between 0.05 and 0.55
+        size = static_cast<float>(rand() % 3) + 1.0f; // Size between 1 and 3
+        starShape.setRadius(size);
+        starShape.setFillColor(sf::Color::White);
+        starShape.setPosition(position);
+    }
+
+    void update(float deltaTime) {
+        position.x += speed * deltaTime;
+        if (position.x > 800) { // Reset star to left if it goes off screen
+            position.x = 0;
+            position.y = static_cast<float>(rand() % 600);
+        }
+        starShape.setPosition(position);
+    }
+
+    void draw(sf::RenderWindow& window) {
+        window.draw(starShape);
+    }
+
+private:
+    sf::Vector2f position;
+    float speed;
+    float size;
+    sf::CircleShape starShape;
+};
+
+std::string getRandomWord(int length) {
+    static const char characters[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    std::string word;
+    for (int i = 0; i < length; ++i) {
+        word += characters[rand() % (sizeof(characters) - 1)];
+    }
+    return word;
+}
+
+sf::Vector2f getRandomPosition(const sf::RenderWindow& window) {
+    float x = -200.0f; // Start position off-screen
+    float y = static_cast<float>(rand() % (window.getSize().y - 50)); // Adjusted for text height
+    return sf::Vector2f(x, y);
+}
+
+int main() {
+    // Seed the random number generator
+    srand(static_cast<unsigned>(time(0)));
+
+    // Create the main window
+    sf::RenderWindow window(sf::VideoMode(800, 600), "Monkey Typer");
+
+    // Set the frame rate limit to make the game run smoothly
+    window.setFramerateLimit(60);
+
+    // Load a font
+    sf::Font font;
+    if (!font.loadFromFile("Oswald-VariableFont_wght.ttf")) {
+        std::cerr << "Error: Failed to load font 'Oswald-VariableFont_wght.ttf'" << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    // Game settings
+    GameSettings settings = { 1.0f, 5 };
+    GameState state = MENU;
+
+    // Setup menu
+    sf::Text startButton;
+    startButton.setFont(font);
+    startButton.setCharacterSize(40);
+    startButton.setFillColor(sf::Color::White);
+    startButton.setString("Start Game");
+
+    sf::Text gameModeButton;
+    gameModeButton.setFont(font);
+    gameModeButton.setCharacterSize(40);
+    gameModeButton.setFillColor(sf::Color::White);
+    gameModeButton.setString("Game Mode");
+
+    sf::Text quitButton;
+    quitButton.setFont(font);
+    quitButton.setCharacterSize(40);
+    quitButton.setFillColor(sf::Color::White);
+    quitButton.setString("Quit Game");
+
+    // Rectangles around buttons
+    sf::FloatRect startButtonBounds = startButton.getLocalBounds();
+    sf::RectangleShape startButtonRect(sf::Vector2f(startButtonBounds.width + 40, startButtonBounds.height + 40));
+    startButtonRect.setPosition(300, 100);
+    startButton.setPosition(
+            startButtonRect.getPosition().x + (startButtonRect.getSize().x - startButtonBounds.width) / 2 - startButtonBounds.left,
+            startButtonRect.getPosition().y + (startButtonRect.getSize().y - startButtonBounds.height) / 2 - startButtonBounds.top
+    );
+    startButtonRect.setOutlineThickness(2);
+    startButtonRect.setOutlineColor(sf::Color::White);
+    startButtonRect.setFillColor(sf::Color::Transparent);
+
+    sf::FloatRect gameModeButtonBounds = gameModeButton.getLocalBounds();
+    sf::RectangleShape gameModeButtonRect(sf::Vector2f(gameModeButtonBounds.width + 40, gameModeButtonBounds.height + 40));
+    gameModeButtonRect.setPosition(300, 200);
+    gameModeButton.setPosition(
+            gameModeButtonRect.getPosition().x + (gameModeButtonRect.getSize().x - gameModeButtonBounds.width) / 2 - gameModeButtonBounds.left,
+            gameModeButtonRect.getPosition().y + (gameModeButtonRect.getSize().y - gameModeButtonBounds.height) / 2 - gameModeButtonBounds.top
+    );
+    gameModeButtonRect.setOutlineThickness(2);
+    gameModeButtonRect.setOutlineColor(sf::Color::White);
+    gameModeButtonRect.setFillColor(sf::Color::Transparent);
+
+    sf::FloatRect quitButtonBounds = quitButton.getLocalBounds();
+    sf::RectangleShape quitButtonRect(sf::Vector2f(quitButtonBounds.width + 40, quitButtonBounds.height + 40));
+    quitButtonRect.setPosition(300, 300);
+    quitButton.setPosition(
+            quitButtonRect.getPosition().x + (quitButtonRect.getSize().x - quitButtonBounds.width) / 2 - quitButtonBounds.left,
+            quitButtonRect.getPosition().y + (quitButtonRect.getSize().y - quitButtonBounds.height) / 2 - quitButtonBounds.top
+    );
+    quitButtonRect.setOutlineThickness(2);
+    quitButtonRect.setOutlineColor(sf::Color::White);
+    quitButtonRect.setFillColor(sf::Color::Transparent);
+
+    // Setup game mode menu
+    sf::Text gameModeSpeedLabel;
+    gameModeSpeedLabel.setFont(font);
+    gameModeSpeedLabel.setCharacterSize(40);
+    gameModeSpeedLabel.setFillColor(sf::Color::White);
+    gameModeSpeedLabel.setString("Word Speed");
+    gameModeSpeedLabel.setPosition(100, 100);
+
+    sf::Text speedOption1Label;
+    speedOption1Label.setFont(font);
+    speedOption1Label.setCharacterSize(30);
+    speedOption1Label.setFillColor(sf::Color::White);
+    speedOption1Label.setString("Speed: 1");
+    speedOption1Label.setPosition(150, 150);
+
+    sf::Text speedOption2Label;
+    speedOption2Label.setFont(font);
+    speedOption2Label.setCharacterSize(30);
+    speedOption2Label.setFillColor(sf::Color::White);
+    speedOption2Label.setString("Speed: 2");
+    speedOption2Label.setPosition(150, 200);
+
+    sf::Text speedOption3Label;
+    speedOption3Label.setFont(font);
+    speedOption3Label.setCharacterSize(30);
+    speedOption3Label.setFillColor(sf::Color::White);
+    speedOption3Label.setString("Speed: 3");
+    speedOption3Label.setPosition(150, 250);
+
+    sf::Text gameModeLengthLabel;
+    gameModeLengthLabel.setFont(font);
+    gameModeLengthLabel.setCharacterSize(40);
+    gameModeLengthLabel.setFillColor(sf::Color::White);
+    gameModeLengthLabel.setString("Word Length");
+    gameModeLengthLabel.setPosition(100, 300);
+
+    sf::Text lengthOption1Label;
+    lengthOption1Label.setFont(font);
+    lengthOption1Label.setCharacterSize(30);
+    lengthOption1Label.setFillColor(sf::Color::White);
+    lengthOption1Label.setString("Length: 3");
+    lengthOption1Label.setPosition(150, 350);
+
+    sf::Text lengthOption2Label;
+    lengthOption2Label.setFont(font);
+    lengthOption2Label.setCharacterSize(30);
+    lengthOption2Label.setFillColor(sf::Color::White);
+    lengthOption2Label.setString("Length: 5");
+    lengthOption2Label.setPosition(150, 400);
+
+    sf::Text lengthOption3Label;
+    lengthOption3Label.setFont(font);
+    lengthOption3Label.setCharacterSize(30);
+    lengthOption3Label.setFillColor(sf::Color::White);
+    lengthOption3Label.setString("Length: 7");
+    lengthOption3Label.setPosition(150, 450);
+
+    sf::CircleShape speedOption1(15);
+    speedOption1.setPosition(100, 160);
+    speedOption1.setOutlineThickness(2);
+    speedOption1.setOutlineColor(sf::Color::White);
+    speedOption1.setFillColor(settings.wordSpeed == 1.0f ? sf::Color::White : sf::Color::Transparent);
+
+    sf::CircleShape speedOption2(15);
+    speedOption2.setPosition(100, 210);
+    speedOption2.setOutlineThickness(2);
+    speedOption2.setOutlineColor(sf::Color::White);
+    speedOption2.setFillColor(settings.wordSpeed == 2.0f ? sf::Color::White : sf::Color::Transparent);
+
+    sf::CircleShape speedOption3(15);
+    speedOption3.setPosition(100, 260);
+    speedOption3.setOutlineThickness(2);
+    speedOption3.setOutlineColor(sf::Color::White);
+    speedOption3.setFillColor(settings.wordSpeed == 3.0f ? sf::Color::White : sf::Color::Transparent);
+
+    sf::CircleShape lengthOption1(15);
+    lengthOption1.setPosition(100, 360);
+    lengthOption1.setOutlineThickness(2);
+    lengthOption1.setOutlineColor(sf::Color::White);
+    lengthOption1.setFillColor(settings.wordLength == 3 ? sf::Color::White : sf::Color::Transparent);
+
+    sf::CircleShape lengthOption2(15);
+    lengthOption2.setPosition(100, 410);
+    lengthOption2.setOutlineThickness(2);
+    lengthOption2.setOutlineColor(sf::Color::White);
+    lengthOption2.setFillColor(settings.wordLength == 5 ? sf::Color::White : sf::Color::Transparent);
+
+    sf::CircleShape lengthOption3(15);
+    lengthOption3.setPosition(100, 460);
+    lengthOption3.setOutlineThickness(2);
+    lengthOption3.setOutlineColor(sf::Color::White);
+    lengthOption3.setFillColor(settings.wordLength == 7 ? sf::Color::White : sf::Color::Transparent);
+
+    sf::Text backButton;
+    backButton.setFont(font);
+    backButton.setCharacterSize(30);
+    backButton.setFillColor(sf::Color::White);
+    backButton.setString("Back");
+    backButton.setPosition(300, 500);
+
+    // Set up the text to display the typed characters
+    sf::Text typedText;
+    typedText.setFont(font);
+    typedText.setCharacterSize(30);
+    typedText.setFillColor(sf::Color::Green);
+    typedText.setPosition(50, 550);
+    std::string typedString;
+
+    // Set up the text to display the score
+    sf::Text scoreText;
+    scoreText.setFont(font);
+    scoreText.setCharacterSize(30);
+    scoreText.setFillColor(sf::Color::Red);
+    scoreText.setPosition(50, 500);
+    int score = 0;
+    scoreText.setString("Score: " + std::to_string(score));
+
+    // Set up the text to display the missed words
+    sf::Text missedText;
+    missedText.setFont(font);
+    missedText.setCharacterSize(30);
+    missedText.setFillColor(sf::Color::Red);
+    missedText.setPosition(50, 450);
+    int missed = 0;
+    missedText.setString("Missed: " + std::to_string(missed));
+
+    // Vector to store words and their positions
+    std::vector<std::pair<std::string, sf::Vector2f>> words;
+
+    // Vector to store stars
+    std::vector<Star> stars;
+    for (int i = 0; i < 100; ++i) {
+        stars.emplace_back(window);
+    }
+
+    sf::Clock clock;
+
+    while (window.isOpen()) {
+        float deltaTime = clock.restart().asSeconds();
+
+        // Process events
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                window.close();
+            }
+
+            if (state == MENU) {
+                if (event.type == sf::Event::MouseButtonPressed) {
+                    if (startButtonRect.getGlobalBounds().contains(window.mapPixelToCoords(sf::Mouse::getPosition(window)))) {
+                        state = GAME;
+                    } else if (gameModeButtonRect.getGlobalBounds().contains(window.mapPixelToCoords(sf::Mouse::getPosition(window)))) {
+                        state = GAME_MODE;
+                    } else if (quitButtonRect.getGlobalBounds().contains(window.mapPixelToCoords(sf::Mouse::getPosition(window)))) {
+                        window.close();
+                    }
+                }
+            } else if (state == GAME_MODE) {
+                if (event.type == sf::Event::MouseButtonPressed) {
+                    if (speedOption1.getGlobalBounds().contains(window.mapPixelToCoords(sf::Mouse::getPosition(window)))) {
+                        settings.wordSpeed = 1.0f;
+                        speedOption1.setFillColor(sf::Color::White);
+                        speedOption2.setFillColor(sf::Color::Transparent);
+                        speedOption3.setFillColor(sf::Color::Transparent);
+                    } else if (speedOption2.getGlobalBounds().contains(window.mapPixelToCoords(sf::Mouse::getPosition(window)))) {
+                        settings.wordSpeed = 2.0f;
+                        speedOption1.setFillColor(sf::Color::Transparent);
+                        speedOption2.setFillColor(sf::Color::White);
+                        speedOption3.setFillColor(sf::Color::Transparent);
+                    } else if (speedOption3.getGlobalBounds().contains(window.mapPixelToCoords(sf::Mouse::getPosition(window)))) {
+                        settings.wordSpeed = 3.0f;
+                        speedOption1.setFillColor(sf::Color::Transparent);
+                        speedOption2.setFillColor(sf::Color::Transparent);
+                        speedOption3.setFillColor(sf::Color::White);
+                    } else if (lengthOption1.getGlobalBounds().contains(window.mapPixelToCoords(sf::Mouse::getPosition(window)))) {
+                        settings.wordLength = 3;
+                        lengthOption1.setFillColor(sf::Color::White);
+                        lengthOption2.setFillColor(sf::Color::Transparent);
+                        lengthOption3.setFillColor(sf::Color::Transparent);
+                    } else if (lengthOption2.getGlobalBounds().contains(window.mapPixelToCoords(sf::Mouse::getPosition(window)))) {
+                        settings.wordLength = 5;
+                        lengthOption1.setFillColor(sf::Color::Transparent);
+                        lengthOption2.setFillColor(sf::Color::White);
+                        lengthOption3.setFillColor(sf::Color::Transparent);
+                    } else if (lengthOption3.getGlobalBounds().contains(window.mapPixelToCoords(sf::Mouse::getPosition(window)))) {
+                        settings.wordLength = 7;
+                        lengthOption1.setFillColor(sf::Color::Transparent);
+                        lengthOption2.setFillColor(sf::Color::Transparent);
+                        lengthOption3.setFillColor(sf::Color::White);
+                    } else if (backButton.getGlobalBounds().contains(window.mapPixelToCoords(sf::Mouse::getPosition(window)))) {
+                        state = MENU;
+                    }
+                }
+            } else if (state == GAME) {
+                if (event.type == sf::Event::TextEntered) {
+                    if (event.text.unicode < 128) {
+                        char typedChar = static_cast<char>(event.text.unicode);
+                        if (typedChar == '\b') { // Check if backspace is pressed
+                            if (!typedString.empty()) {
+                                typedString.pop_back(); // Delete the last character
+                                typedText.setString("Typing word: " + typedString);
+                            }
+                        } else if (std::isprint(typedChar)) { // Only append printable characters
+                            typedString += typedChar;
+                            typedText.setString("Typing word: " + typedString);
+
+                            // Check if the typed word matches any word in the vector
+                            auto it = std::find_if(words.begin(), words.end(), [&](const auto& pair) {
+                                return pair.first == typedString;
+                            });
+                            if (it != words.end()) {
+                                words.erase(it); // Remove typed word from vector
+                                typedString.clear(); // Clear typed string
+                                typedText.setString("Typing word: " + typedString);
+                                score++; // Increment score
+                                scoreText.setString("Score: " + std::to_string(score));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Clear screen
+        window.clear();
+
+        if (state == MENU) {
+            window.draw(startButtonRect);
+            window.draw(startButton);
+            window.draw(gameModeButtonRect);
+            window.draw(gameModeButton);
+            window.draw(quitButtonRect);
+            window.draw(quitButton);
+        } else if (state == GAME_MODE) {
+            window.draw(gameModeSpeedLabel);
+            window.draw(speedOption1);
+            window.draw(speedOption2);
+            window.draw(speedOption3);
+            window.draw(speedOption1Label);
+            window.draw(speedOption2Label);
+            window.draw(speedOption3Label);
+            window.draw(gameModeLengthLabel);
+            window.draw(lengthOption1);
+            window.draw(lengthOption2);
+            window.draw(lengthOption3);
+            window.draw(lengthOption1Label);
+            window.draw(lengthOption2Label);
+            window.draw(lengthOption3Label);
+            window.draw(backButton);
+        } else if (state == GAME) {
+            // Update and draw the stars
+            for (auto& star : stars) {
+                star.update(deltaTime * 50); // Adjust the speed to be slower
+                star.draw(window);
+            }
+
+            // Generate and draw the words
+            for (auto it = words.begin(); it != words.end();) {
+                it->second.x += settings.wordSpeed; // Move words from left to right
+                if (it->second.x > window.getSize().x) { // Check if the word is off screen
+                    it = words.erase(it); // Remove the word from the vector
+                    missed++; // Increment missed counter
+                    missedText.setString("Missed: " + std::to_string(missed));
+                } else {
+                    sf::Text wordText;
+                    wordText.setFont(font);
+                    wordText.setCharacterSize(30);
+                    wordText.setFillColor(sf::Color::White);
+                    wordText.setString(it->first);
+                    wordText.setPosition(it->second);
+                    window.draw(wordText);
+                    ++it;
+                }
+            }
+
+            // Generate new word if needed
+            if (rand() % 100 == 0) {
+                words.push_back({ getRandomWord(settings.wordLength), getRandomPosition(window) });
+            }
+
+            // Draw the typed characters
+            window.draw(typedText);
+
+            // Draw the score
+            window.draw(scoreText);
+
+            // Draw the missed words counter
+            window.draw(missedText);
+        }
+
+        // Update the window
+        window.display();
+    }
+
+    return EXIT_SUCCESS;
+}
