@@ -16,13 +16,21 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(SFML)
 
-add_executable(Project1 main.cpp)
+add_executable(Project1 main.cpp
+)
 
 target_link_libraries(Project1 sfml-graphics sfml-window sfml-system)
 
-# Ensure the font file is copied to the binary directory (where the executable will be placed)
+# Ensure the font files are copied to the binary directory (where the executable will be placed)
 add_custom_command(TARGET Project1 POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
-        "${CMAKE_SOURCE_DIR}/Oswald-VariableFont_wght.ttf" "${CMAKE_BINARY_DIR}/Oswald-VariableFont_wght.ttf"
-        COMMENT "Copying Oswald-VariableFont_wght.ttf to the binary directory"
+        "${CMAKE_SOURCE_DIR}/Kanit-Black.ttf" "${CMAKE_BINARY_DIR}/Kanit-Black.ttf"
+        COMMENT "Copying Kanit-Black.ttf to the binary directory"
 )
+
+add_custom_command(TARGET Project1 POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+        "${CMAKE_SOURCE_DIR}/ProtestGuerrilla-Regular.ttf" "${CMAKE_BINARY_DIR}/ProtestGuerrilla-Regular.ttf"
+        COMMENT "Copying ProtestGuerrilla-Regular.ttf to the binary directory"
+)
+
